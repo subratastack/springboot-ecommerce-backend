@@ -47,7 +47,7 @@ public class UserServiceImpl implements UserService {
             throws UserAlreadyExistsException, EmailFailureException {
 
         if (localUserRepository.findByEmailIgnoreCase(userRegistrationDto.getEmail()).isPresent()
-                && localUserRepository.findByUsernameIgnoreCase(userRegistrationDto.getUsername()).isPresent()) {
+                || localUserRepository.findByUsernameIgnoreCase(userRegistrationDto.getUsername()).isPresent()) {
             throw new UserAlreadyExistsException("User already exists: " + userRegistrationDto.getUsername());
         }
 
