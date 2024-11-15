@@ -30,7 +30,11 @@ public class WebSecurityConfig {
                 .addFilterBefore(filterExceptionHandler(), JwtRequestFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET,  "/product").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/auth/register",
+                                "/auth/login",
+                                "/auth/forgot",
+                                "/auth/reset").permitAll()
                         .requestMatchers(HttpMethod.GET, "/auth/verify").permitAll()
                         .anyRequest().authenticated());
 

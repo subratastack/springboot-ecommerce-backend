@@ -167,4 +167,10 @@ class UserServiceImplTest {
                         Message.RecipientType.TO)[0].toString());
     }
 
+    @Test
+    @Transactional
+    public void testLoginUser() {
+
+    }
+
 }

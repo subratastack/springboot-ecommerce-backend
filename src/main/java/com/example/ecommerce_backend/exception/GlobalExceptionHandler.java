@@ -1,5 +1,6 @@
 package com.example.ecommerce_backend.exception;
 
+import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.example.ecommerce_backend.api.dto.ExceptionResponseDto;
 import com.example.ecommerce_backend.api.dto.ValidationErrorResponseDto;
 import org.springframework.http.HttpStatus;
@@ -49,7 +50,25 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotVerifiedException.class)
     public ResponseEntity<ExceptionResponseDto> handleUserNotVerifiedException(UserNotVerifiedException e) {
-        ExceptionResponseDto responseDto = new ExceptionResponseDto((e.getMessage()));
+        ExceptionResponseDto responseDto = new ExceptionResponseDto(e.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    @ExceptionHandler(EmailNotFoundException.class)
+    public ResponseEntity<ExceptionResponseDto> handleEmailNotFoundException(EmailNotFoundException e) {
+        ExceptionResponseDto responseDto = new ExceptionResponseDto(e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    }
+
+    @ExceptionHandler(ExpiredTokenException.class)
+    public ResponseEntity<ExceptionResponseDto> handleExpiredTokenException(ExpiredTokenException e) {
+        ExceptionResponseDto responseDto = new ExceptionResponseDto(e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    }
+
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<ExceptionResponseDto> handleTokenExpiredException(TokenExpiredException e) {
+        ExceptionResponseDto responseDto = new ExceptionResponseDto(e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 }

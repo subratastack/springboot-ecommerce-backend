@@ -1,5 +1,6 @@
 package com.example.ecommerce_backend.api.controller.auth;
 
+import com.example.ecommerce_backend.api.dto.ResetPasswordRequestDto;
 import com.example.ecommerce_backend.api.dto.UserLoginRequestDto;
 import com.example.ecommerce_backend.api.dto.UserLoginResponseDto;
 import com.example.ecommerce_backend.api.dto.UserRegistrationDto;
@@ -49,5 +50,17 @@ public class AuthenticationController {
         } else {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
+    }
+
+    @PostMapping("/forgot")
+    public ResponseEntity<Void> forgotPassword(@RequestParam String email) {
+        userService.forgotPassword(email);
+        return ResponseEntity.status(HttpStatus.OK).build();
+    }
+
+    @PostMapping("/reset")
+    public ResponseEntity<Void> resetPassword(@RequestBody ResetPasswordRequestDto resetPasswordRequestDto) {
+        userService.resetPassword(resetPasswordRequestDto);
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 }

@@ -1,16 +1,17 @@
 package com.example.ecommerce_backend.service;
 
+import com.auth0.jwt.exceptions.TokenExpiredException;
+import com.example.ecommerce_backend.api.dto.ResetPasswordRequestDto;
 import com.example.ecommerce_backend.api.dto.UserLoginRequestDto;
 import com.example.ecommerce_backend.api.dto.UserRegistrationDto;
 import com.example.ecommerce_backend.api.security.service.EncryptionService;
 import com.example.ecommerce_backend.api.security.service.JwtService;
-import com.example.ecommerce_backend.exception.EmailFailureException;
-import com.example.ecommerce_backend.exception.UserAlreadyExistsException;
-import com.example.ecommerce_backend.exception.UserNotFoundException;
-import com.example.ecommerce_backend.exception.UserNotVerifiedException;
+import com.example.ecommerce_backend.exception.*;
 import com.example.ecommerce_backend.model.LocalUser;
+import com.example.ecommerce_backend.model.ResetPasswordToken;
 import com.example.ecommerce_backend.model.VerificationToken;
 import com.example.ecommerce_backend.model.repository.LocalUserRepository;
+import com.example.ecommerce_backend.model.repository.ResetPasswordTokenRepository;
 import com.example.ecommerce_backend.model.repository.VerificationTokenRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class UserServiceImpl implements UserService {
 
     private final LocalUserRepository localUserRepository;
     private final VerificationTokenRepository verificationTokenRepository;
+    private final ResetPasswordTokenRepository resetPasswordTokenRepository;
     private final EncryptionService encryptionService;
     private final JwtService jwtService;
     private final EmailService emailService;
@@ -33,12 +35,14 @@ public class UserServiceImpl implements UserService {
             EncryptionService encryptionService,
             JwtService jwtService,
             EmailService emailService,
-            VerificationTokenRepository verificationTokenRepository) {
+            VerificationTokenRepository verificationTokenRepository,
+            ResetPasswordTokenRepository resetPasswordTokenRepository) {
         this.localUserRepository = localUserRepository;
         this.encryptionService = encryptionService;
         this.jwtService = jwtService;
         this.emailService = emailService;
         this.verificationTokenRepository = verificationTokenRepository;
+        this.resetPasswordTokenRepository = resetPasswordTokenRepository;
     }
 
     @Override
@@ -118,6 +122,45 @@ public class UserServiceImpl implements UserService {
         return false;
     }
 
+    @Override
+    @Transactional
+    public void forgotPassword(String email) throws EmailNotFoundException {
+        Optional<LocalUser> optionalUser = localUserRepository.findByEmailIgnoreCase(email);
+
+        if (optionalUser.isPresent()) {
+            LocalUser user = optionalUser.get();
+            ResetPasswordToken token = createResetPasswordToken(user);
+            resetPasswordTokenRepository.save(token);
+            emailService.sendResetPasswordEmail(user, token.getToken());
+        } else {
+            throw new EmailNotFoundException();
+        }
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequestDto resetPasswordRequestDto) throws ExpiredTokenException, UserNotFoundException, TokenExpiredException {
+        String email = jwtService.getResetPasswordEmail(resetPasswordRequestDto.getToken());
+        Optional<LocalUser> optionalLocalUser = localUserRepository.findByEmailIgnoreCase(email);
+
+        if (optionalLocalUser.isPresent()) {
+            LocalUser user = optionalLocalUser.get();
+            Optional<ResetPasswordToken> optionalResetPasswordToken = resetPasswordTokenRepository
+                    .findByTokenAndUser_Id(resetPasswordRequestDto.getToken(), user.getId());
+            if (optionalResetPasswordToken.isPresent()) {
+                String token = optionalResetPasswordToken.get().getToken();
+                user.setPassword(encryptionService.encryptPassword(resetPasswordRequestDto.getPassword()));
+                resetPasswordTokenRepository.deleteByTokenAndUser(token, user);
+                localUserRepository.save(user);
+                return;
+            } else {
+                throw new ExpiredTokenException("Reset password token is invalid.");
+            }
+        }
+
+        throw new UserNotFoundException("User not found for email address: " + email);
+    }
+
     private VerificationToken createVerificationToken(LocalUser user) {
         VerificationToken token = VerificationToken.builder()
                 .token(jwtService.generateVerificationJwt(user))
@@ -125,6 +168,16 @@ public class UserServiceImpl implements UserService {
                 .createdTimestamp(new Timestamp(System.currentTimeMillis()))
                 .build();
         user.getVerificationTokens().add(token);
+        return token;
+    }
+
+    private ResetPasswordToken createResetPasswordToken(LocalUser user) {
+        ResetPasswordToken token = ResetPasswordToken.builder()
+                .token(jwtService.generatePasswordResetJwt(user))
+                .user(user)
+                .createdTimestamp(new Timestamp(System.currentTimeMillis()))
+                .build();
+        user.getResetPasswordTokens().add(token);
         return token;
     }
 }
